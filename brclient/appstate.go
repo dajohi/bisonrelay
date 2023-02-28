@@ -1650,6 +1650,19 @@ func (as *appState) closeChannel(chanPoint *lnrpc.ChannelPoint, force bool) {
 // requestRecv returns when an error happens up until the stage where the
 // channel is pending.
 func (as *appState) requestRecv(amount, server, key string, caCert []byte) error {
+	cpr := lnrpc.ConnectPeerRequest{
+		Addr: &lnrpc.LightningAddress{
+			Pubkey: key,
+			Host:   normalizeAddress(server, defaultLNPort),
+		},
+		Perm: true,
+	}
+	_, err := as.lnRPC.ConnectPeer(as.ctx, &cpr)
+	if err != nil && !strings.Contains(err.Error(), "already connected") {
+		return fmt.Errorf("Unable to connect to "+
+			"peer %v: %w", server, err)
+	}
+
 	chanF, err := strconv.ParseFloat(amount, 64)
 	if err != nil {
 		return err
@@ -1662,7 +1675,7 @@ func (as *appState) requestRecv(amount, server, key string, caCert []byte) error
 	pendingChan := make(chan struct{})
 	lpcfg := lpclient.Config{
 		LC:           as.lnRPC,
-		Address:      server,
+		Address:      fmt.Sprintf("https://%s", normalizeAddress(server, "9130")),
 		Key:          key,
 		Certificates: caCert,
 

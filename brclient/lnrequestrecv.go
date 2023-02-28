@@ -27,7 +27,7 @@ type lnRequestRecvWindow struct {
 }
 
 const (
-	lp0Server = "https://lp0.bisonrelay.org:9130"
+	lp0Server = "lp0.bisonrelay.org"
 	lp0Cert   = `-----BEGIN CERTIFICATE-----
 MIIBwjCCAWmgAwIBAgIQA78YKmDt+ffFJmAN5EZmejAKBggqhkjOPQQDAjAyMRMw
 EQYDVQQKEwpiaXNvbnJlbGF5MRswGQYDVQQDExJscDAuYmlzb25yZWxheS5vcmcw
