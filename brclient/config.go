@@ -2,10 +2,12 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"html/template"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -14,7 +16,9 @@ import (
 	"strings"
 
 	"github.com/companyzero/bisonrelay/brclient/internal/version"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/decred/dcrd/dcrutil/v4"
+	"github.com/decred/go-socks/socks"
 	"github.com/jrick/flagfile"
 	"golang.org/x/exp/slices"
 )
@@ -79,7 +83,6 @@ type config struct {
 	ProxyUser    string
 	ProxyPass    string
 	TorIsolation bool
-	CircuitLimit uint32
 
 	MinWalletBal dcrutil.Amount
 	MinRecvBal   dcrutil.Amount
@@ -94,6 +97,8 @@ type config struct {
 	RPCKeyPath         string
 	RPCClientCAPath    string
 	RPCIssueClientCert bool
+
+	dialFunc func(context.Context, string, string) (net.Conn, error)
 }
 
 func defaultAppDataDir(homeDir string) string {
@@ -342,6 +347,24 @@ func loadConfig() (*config, error) {
 		}
 	}
 
+	var d net.Dialer
+	dialFunc := d.DialContext
+	if *flagProxyAddr != "" {
+		proxy := socks.Proxy{
+			Addr:         *flagProxyAddr,
+			Username:     *flagProxyUser,
+			Password:     *flagProxyPass,
+			TorIsolation: *flagTorIsolation,
+		}
+		var proxyDialer clientintf.DialFunc
+		if *flagTorIsolation {
+			proxyDialer = socks.NewPool(proxy, uint32(*flagCircuitLimit)).DialContext
+		} else {
+			proxyDialer = proxy.DialContext
+		}
+		dialFunc = proxyDialer
+	}
+
 	// Return the final cfg object.
 	return &config{
 		ServerAddr:         *flagServerAddr,
@@ -374,7 +397,6 @@ func loadConfig() (*config, error) {
 		ProxyUser:          *flagProxyUser,
 		ProxyPass:          *flagProxyPass,
 		TorIsolation:       *flagTorIsolation,
-		CircuitLimit:       uint32(*flagCircuitLimit),
 		MinWalletBal:       minWalletBal,
 		MinRecvBal:         minRecvBal,
 		MinSendBal:         minSendBal,
@@ -386,6 +408,8 @@ func loadConfig() (*config, error) {
 		RPCClientCAPath:    *flagRPCClientCAPath,
 		RPCIssueClientCert: *flagRPCIssueClientCert,
 		InviteFundsAccount: *flagInviteFundsAccount,
+
+		dialFunc: dialFunc,
 	}, nil
 }
 
