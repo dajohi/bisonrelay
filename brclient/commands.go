@@ -2323,6 +2323,7 @@ var lnCommands = []tuicmd{
 
 			as.cwHelpMsg("Attempting to pay invoice")
 			go func() {
+				// nolint:staticcheck
 				pc, err := as.lnRPC.SendPayment(as.ctx)
 				if err != nil {
 					as.cwHelpMsg("PC: %v", err)
@@ -2336,19 +2337,16 @@ var lnCommands = []tuicmd{
 				if err != nil {
 					as.cwHelpMsg("Unable to start payment: %v", err)
 				}
-				for res, err := pc.Recv(); ; {
-					if err != nil {
-						as.cwHelpMsg("PC receive error: %v", err)
-						return
-					}
-					if res.PaymentError != "" {
-						as.cwHelpMsg("Payment error: %s", res.PaymentError)
-						return
-					}
-					as.cwHelpMsg("Payment done!")
+				res, err := pc.Recv()
+				if err != nil {
+					as.cwHelpMsg("PC receive error: %v", err)
 					return
 				}
-
+				if res.PaymentError != "" {
+					as.cwHelpMsg("Payment error: %s", res.PaymentError)
+					return
+				}
+				as.cwHelpMsg("Payment done!")
 			}()
 
 			return nil

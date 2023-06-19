@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -199,7 +200,7 @@ func newUnlockLNScreen(cfg *config, lndc *embeddeddcrlnd.Dcrlnd,
 	txtPass.PromptStyle = theme.focused
 	txtPass.TextStyle = theme.focused
 	txtPass.Width = 100
-	txtPass.SetCursorMode(textinput.CursorBlink)
+	txtPass.Cursor.SetMode(cursor.CursorBlink)
 
 	viewport := viewport.Model{
 		YPosition: 15,

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -180,7 +181,7 @@ func newInitialUIDState(as *appState) (initialUIDState, tea.Cmd) {
 
 		inputs[i] = t
 	}
-	cmd := inputs[0].SetCursorMode(textinput.CursorBlink)
+	cmd := inputs[0].Cursor.SetMode(cursor.CursorBlink)
 
 	return initialUIDState{
 		as:     as,

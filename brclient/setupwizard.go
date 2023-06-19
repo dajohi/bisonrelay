@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/companyzero/bisonrelay/embeddeddcrlnd"
@@ -110,20 +111,20 @@ func (sws *setupWizardScreen) initInputsExternalDetails() tea.Cmd {
 	txtLNHost.Prompt = "LN Wallet Host: "
 	txtLNHost.Width = sws.winW
 	txtLNHost.SetValue("127.0.0.1:10009")
-	txtLNHost.SetCursorMode(textinput.CursorBlink)
+	txtLNHost.Cursor.SetMode(cursor.CursorBlink)
 
 	txtLNTls := textinput.New()
 	txtLNTls.Placeholder = ""
 	txtLNTls.Prompt = "TLS Cert Path: "
 	txtLNTls.Width = sws.winW
 	txtLNTls.SetValue("~/.dcrlnd/tls.cert")
-	txtLNTls.SetCursorMode(textinput.CursorBlink)
+	txtLNTls.Cursor.SetMode(cursor.CursorBlink)
 
 	txtLNMacaroon := textinput.New()
 	txtLNMacaroon.Placeholder = ""
 	txtLNMacaroon.Prompt = "Macaroon Path: "
 	txtLNMacaroon.Width = sws.winW
-	txtLNMacaroon.SetCursorMode(textinput.CursorBlink)
+	txtLNMacaroon.Cursor.SetMode(cursor.CursorBlink)
 	defMacaPath := fmt.Sprintf("~/.dcrlnd/data/chain/decred/%s/admin.macaroon",
 		sws.net)
 	txtLNMacaroon.SetValue(defMacaPath)
@@ -141,7 +142,7 @@ func (sws *setupWizardScreen) initInputsServer() tea.Cmd {
 	txtServer.Placeholder = ""
 	txtServer.Prompt = "Relay Server Address: "
 	txtServer.Width = sws.winW
-	txtServer.SetCursorMode(textinput.CursorBlink)
+	txtServer.Cursor.SetMode(cursor.CursorBlink)
 
 	// Set default server address based on the newtork.
 	switch sws.net {
@@ -163,13 +164,13 @@ func (sws *setupWizardScreen) initRestoreWallet() tea.Cmd {
 	txtRestore.Placeholder = ""
 	txtRestore.Prompt = "Wallet Seed: "
 	txtRestore.Width = sws.winW
-	txtRestore.SetCursorMode(textinput.CursorBlink)
+	txtRestore.Cursor.SetMode(cursor.CursorBlink)
 
 	txtRestoreSCB := textinput.New()
 	txtRestoreSCB.Placeholder = ""
 	txtRestoreSCB.Prompt = "Path to Channel MCB (recommended): "
 	txtRestoreSCB.Width = sws.winW
-	txtRestoreSCB.SetCursorMode(textinput.CursorBlink)
+	txtRestoreSCB.Cursor.SetMode(cursor.CursorBlink)
 
 	sws.inputs = []textinput.Model{txtRestore, txtRestoreSCB}
 	return batchCmds(sws.setFocus(0))
@@ -182,7 +183,7 @@ func (sws *setupWizardScreen) initInputsWalletPass() tea.Cmd {
 	txtPass.Width = sws.winW
 	txtPass.EchoCharacter = '*'
 	txtPass.EchoMode = textinput.EchoPassword
-	txtPass.SetCursorMode(textinput.CursorBlink)
+	txtPass.Cursor.SetMode(cursor.CursorBlink)
 
 	txtPassDup := textinput.New()
 	txtPassDup.Placeholder = ""
@@ -190,7 +191,7 @@ func (sws *setupWizardScreen) initInputsWalletPass() tea.Cmd {
 	txtPassDup.Width = sws.winW
 	txtPassDup.EchoCharacter = '*'
 	txtPassDup.EchoMode = textinput.EchoPassword
-	txtPassDup.SetCursorMode(textinput.CursorBlink)
+	txtPassDup.Cursor.SetMode(cursor.CursorBlink)
 
 	sws.inputs = []textinput.Model{txtPass, txtPassDup}
 	return batchCmds(sws.setFocus(0))
@@ -201,7 +202,7 @@ func (sws *setupWizardScreen) initConfirmSeedInputs() tea.Cmd {
 	txtOk.Placeholder = ""
 	txtOk.Prompt = "Type OK to proceed: "
 	txtOk.Width = sws.winW
-	txtOk.SetCursorMode(textinput.CursorBlink)
+	txtOk.Cursor.SetMode(cursor.CursorBlink)
 
 	sws.inputs = []textinput.Model{txtOk}
 	return batchCmds(sws.setFocus(0))
