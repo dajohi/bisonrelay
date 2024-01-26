@@ -15,11 +15,11 @@ jobs:
       - name: Check out source
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 #v3.5.3
       - name: Install protoc
-        uses: arduino/setup-protoc@9b1ee5b22b0a3f1feb8c2ff99b32c89b3c3191e9 #v2.0.0
+        uses: arduino/setup-protoc@a8b67ba40b37d35169e222f3bb352603327985b6 #v2.1.0
         with:
           version: '23.x'
       - name: Install protolint
-        run: go install github.com/yoheimuta/protolint/cmd/protolint@v0.46.0
+        run: go install github.com/yoheimuta/protolint/cmd/protolint@v0.47.5
       - name: Lint proto files
         run: protolint lint .
         working-directory: clientrpc
