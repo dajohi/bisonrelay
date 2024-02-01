@@ -61,3 +61,20 @@ func ParseErrUnpaidSubscriptionRV(s string) error {
 
 	return ErrUnpaidSubscriptionRV(rv)
 }
+
+type ErrRouteUnknownMessage struct {
+	rv string
+}
+
+func (err ErrRouteUnknownMessage) Error() string {
+	return fmt.Sprintf("unknown routed message command: %s", err.rv)
+}
+
+func (err ErrRouteUnknownMessage) Is(target error) bool {
+	_, ok := target.(ErrRouteUnknownMessage)
+	return ok
+}
+
+func makeErrRouteUnknownMessage(rv string) ErrRouteUnknownMessage {
+	return ErrRouteUnknownMessage{rv: rv}
+}

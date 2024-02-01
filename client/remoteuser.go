@@ -625,17 +625,19 @@ func (ru *RemoteUser) maybeUpdateRVs(lastRecvRV, lastDrainRV ratchet.RVPoint, ha
 
 	// Wait until all changes are applied on the server.
 	err := g.Wait()
-	switch {
-	case err == nil:
-		// Keep going.
-	case errors.Is(err, lowlevel.ErrRVAlreadySubscribed{}):
-		// This ordinarily shouldn't happen if our assumptions
-		// are correct, but isn't a fatal error, so log it as a
-		// debug msg and keep going.
-		ru.log.Debugf("Unexpected non-fatal error: %v", err)
-	default:
-		// Other errors are fatal.
-		return emptyRV, emptyRV, err
+	if err != nil {
+		var rpcErr rpc.ErrRouteUnknownMessage
+		if errors.As(err, &rpcError) {
+			ru.log.Warnf("%v", err)
+		} else if errors.Is(err, lowlevel.ErrRVAlreadySubscribed{}) {
+			// This ordinarily shouldn't happen if our assumptions
+			// are correct, but isn't a fatal error, so log it as a
+			// debug msg and keep going.
+			ru.log.Debugf("Unexpected non-fatal error: %v", err)
+		} else {
+			// Other errors are fatal.
+			return emptyRV, emptyRV, err
+		}
 	}
 
 	return rv, drainRV, nil

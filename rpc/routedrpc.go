@@ -382,7 +382,7 @@ func ComposeCompressedRM(from *zkidentity.FullIdentity, rm interface{}, zlibLeve
 	// Purely transitive commands
 
 	default:
-		return nil, fmt.Errorf("unknown routed message type: %T", rm)
+		return nil, makeErrRouteUnknownMessage(fmt.Sprintf("%T", rm))
 	}
 
 	// Encode payload
