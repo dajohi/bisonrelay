@@ -3885,6 +3885,7 @@ var commands = []tuicmd{
 			if err != nil {
 				return err
 			}
+			as.autoSubscribe.Store(cfg.AutoSubscribe)
 			as.externalEditorForComments.Store(cfg.ExternalEditorForComments)
 			as.mimeMap.Store(&cfg.MimeMap)
 			as.styles.Store(theme)

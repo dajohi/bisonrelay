@@ -111,6 +111,7 @@ type config struct {
 	AutoHandshakeInterval       time.Duration
 	AutoRemoveIdleUsersInterval time.Duration
 	AutoRemoveIdleUsersIgnore   []string
+	AutoSubscribe               bool
 
 	SyncFreeList bool
 
@@ -288,6 +289,7 @@ func loadConfig() (*config, error) {
 	flagAutoHandshake := fs.String("autohandshakeinterval", "21d", "")
 	flagAutoRemove := fs.String("autoremoveidleusersinterval", "60d", "")
 	flagAutoRemoveIgnoreList := fs.String("autoremoveignorelist", defaultAutoRemoveIgnoreList, "")
+	flagAutoSubscribe := fs.Bool("autosubscribe", true, "Whether to automatically subscribe to new user's posts")
 
 	// log
 	flagMsgRoot := fs.String("log.msglog", defaultMsgRoot, "Root for message log files")
@@ -523,6 +525,7 @@ func loadConfig() (*config, error) {
 		AutoHandshakeInterval:       autoHandshakeInterval,
 		AutoRemoveIdleUsersInterval: autoRemoveInterval,
 		AutoRemoveIdleUsersIgnore:   autoRemoveIgnoreList,
+		AutoSubscribe:               *flagAutoSubscribe,
 
 		SyncFreeList:              *flagSyncFreeList,
 		ExternalEditorForComments: *flagExternalEditorForComments,

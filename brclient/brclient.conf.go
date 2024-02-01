@@ -76,6 +76,9 @@ root = {{ .Root }}
 # ad716557157c1f191d8b5f8c6757ea41af49de27dc619fc87f337ca85be325ee - GC bot
 # autoremoveignorelist =
 
+# autosubscribe sets whether to automatically subscribe to a new user's posts.
+# autosubscribe = true
+
 # logging and debug
 [log]
 

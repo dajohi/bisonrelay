@@ -197,7 +197,8 @@ type appState struct {
 	// Collator for sorting strings for displaying.
 	collator *collate.Collator
 
-	mimeMap atomic.Pointer[map[string]string]
+	mimeMap       atomic.Pointer[map[string]string]
+	autoSubscribe atomic.Bool
 
 	// cmd to run when receiving messages. First element is bin, other are
 	// args.
@@ -2824,6 +2825,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		// On newly KXd users, go through GCs and inform user has been
 		// KXd with.
 		if isNew {
+			if as.autoSubscribe.Load() {
+				if err := as.subscribeToPosts(user.ID()); err != nil {
+					as.diagMsg("Unable to subscribe to new user %q (%s) posts: %v",
+						strescape.Nick(user.Nick()), user.ID(), err)
+				}
+			}
 			gcs, err := as.c.GCsWithMember(user.ID())
 			if err != nil {
 				as.diagMsg("Unable to list GCs with member: %v", err)
@@ -3771,6 +3778,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		ssAcct:       args.SimpleStoreAccount,
 		ssShipCharge: args.SimpleStoreShipCharge,
 	}
+	as.autoSubscribe.Store(args.AutoSubscribe)
 	as.externalEditorForComments.Store(args.ExternalEditorForComments)
 	as.mimeMap.Store(&args.MimeMap)
 	as.styles.Store(theme)
