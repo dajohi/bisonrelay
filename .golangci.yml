@@ -11,8 +11,11 @@ linters:
     - asciicheck
     - bidichk
     - bodyclose
+    - contextcheck
+    - dupword
     - durationcheck
     - errchkjson
+    - errorlint
     - exportloopref
     - gofmt
     - goimports
@@ -22,6 +25,7 @@ linters:
     - ineffassign
     - makezero
     - misspell
+    - nilerr
     - noctx
     - nosprintfhostport
     - reassign
@@ -31,5 +35,4 @@ linters:
     - typecheck
     - unconvert
     - unused
-    - vetshadow
     - wastedassign
