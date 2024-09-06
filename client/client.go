@@ -996,10 +996,11 @@ func (c *Client) Handshake(uid UserID) error {
 // ChatHistoryEntry contains information parsed from a single line in a chat
 // log.
 type ChatHistoryEntry struct {
-	Message   string `json:"message"`
-	From      string `json:"from"`
-	Timestamp int64  `json:"timestamp"`
-	Internal  bool   `json:"internal"`
+	Mode      rpc.MessageMode `json:"messageMode"`
+	Message   string          `json:"message"`
+	From      string          `json:"from"`
+	Timestamp int64           `json:"timestamp"`
+	Internal  bool            `json:"internal"`
 }
 
 // ReadHistoryMessages determines which log parsing to use based on whether
@@ -1052,6 +1053,7 @@ func (c *Client) ReadHistoryMessages(uid UserID, isGC bool, page, pageNum int) (
 			}
 			if !filter {
 				chatHistory = append(chatHistory, ChatHistoryEntry{
+					Mode:      entry.Mode,
 					Message:   entry.Message,
 					From:      entry.From,
 					Internal:  entry.Internal,

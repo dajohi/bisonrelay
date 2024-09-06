@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
+	"github.com/companyzero/bisonrelay/rpc"
 	"golang.org/x/exp/maps"
 )
 
@@ -163,7 +164,7 @@ func (mws *mainWindowState) onTextInputAction() {
 			return args.String()
 		})
 
-		mws.as.msgInActiveWindow(text)
+		mws.as.msgInActiveWindow(rpc.MessageModeNormal, text)
 	}
 
 	// Clear line editor

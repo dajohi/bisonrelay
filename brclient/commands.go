@@ -19,6 +19,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/strescape"
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
@@ -958,7 +959,7 @@ var gcCommands = []tuicmd{
 				return err
 			}
 			cw := as.findOrNewGCWindow(gcID)
-			go as.pm(cw, msg)
+			go as.pm(cw, rpc.MessageModeNormal, msg)
 			return nil
 		},
 		completer: func(args []string, arg string, as *appState) []string {
@@ -3823,6 +3824,18 @@ var commands = []tuicmd{
 			return nil
 		},
 	}, {
+		cmd:   "me",
+		usage: "<message>",
+		descr: "Send a user action",
+		rawHandler: func(rawCmd string, args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "cannot be empty"}
+			}
+			go as.msgInActiveWindow(rpc.MessageModeMe, strings.Join(args[0:], " "))
+			return nil
+		},
+		completer: nil,
+	}, {
 		cmd:     "msg",
 		usage:   "<nick or id> <message>",
 		aliases: []string{"m"},
@@ -3843,7 +3856,7 @@ var commands = []tuicmd{
 
 			_, msg := popNArgs(rawCmd, 2) // cmd + nick
 			cw := as.findOrNewChatWindow(ru.ID(), ru.Nick())
-			go as.pm(cw, msg)
+			go as.pm(cw, rpc.MessageModeNormal, msg)
 			return nil
 		},
 		completer: func(args []string, arg string, as *appState) []string {

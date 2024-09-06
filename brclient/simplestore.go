@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/companyzero/bisonrelay/client/resources/simplestore"
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrd/txscript/v4/stdscript"
 	"github.com/decred/dcrd/wire"
@@ -28,7 +29,7 @@ func handleCompletedSimpleStoreOrder(as *appState, order *simplestore.Order, msg
 	}
 
 	cw := as.findOrNewChatWindow(ru.ID(), ru.Nick())
-	as.pm(cw, msg)
+	as.pm(cw, rpc.MessageModeNormal, msg)
 }
 
 func handleSimpleStoreOrderStatusChanged(as *appState, order *simplestore.Order, msg string) {
@@ -40,7 +41,7 @@ func handleSimpleStoreOrderStatusChanged(as *appState, order *simplestore.Order,
 	}
 
 	cw := as.findOrNewChatWindow(ru.ID(), ru.Nick())
-	as.pm(cw, msg)
+	as.pm(cw, rpc.MessageModeNormal, msg)
 }
 
 func handleNewTransaction(as *appState, tx *lnrpc.Transaction) error {

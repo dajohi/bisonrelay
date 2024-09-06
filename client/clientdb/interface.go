@@ -409,6 +409,7 @@ func (o *PageSessionOverview) appendRequest(uid clientintf.UserID, tag rpc.Resou
 }
 
 type PMLogEntry struct {
+	Mode      string `json:"messageMode"`
 	Message   string `json:"message"`
 	From      string `json:"from"`
 	Timestamp int64  `json:"timestamp"`

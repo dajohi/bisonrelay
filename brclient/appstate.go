@@ -630,7 +630,7 @@ loop:
 			// Otherwise, rewind the index of unread msgs, because
 			// this is a history message that hasn't been read.
 			if !inmsg.recvts.Before(cw.initTime) || !as.logsMsgs {
-				cw.newRecvdMsg(fromNick, msgContent, &fromUID, ts)
+				cw.newRecvdMsg(mode, fromNick, msgContent, &fromUID, ts)
 			} else {
 				cw.Lock()
 				cw.unreadIdx -= 1
@@ -1169,7 +1169,7 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 					time.Unix(chatHistory[i-1].Timestamp, 0).Format("2006-01-02")) {
 			cw.newInternalMsg(fmt.Sprintf("Day changed to %s", time.Unix(chatLog.Timestamp, 0).Format("2006-01-02")))
 		}
-		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty,
+		cw.newHistoryMsg(chatLog.Mode, chatLog.From, chatLog.Message, empty,
 			time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me,
 			chatLog.Internal)
 	}
@@ -1219,7 +1219,7 @@ func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *cha
 			cw.newInternalMsg(fmt.Sprintf("Day changed to %s", time.Unix(chatLog.Timestamp, 0).Format("2006-01-02")))
 		}
 		var empty *zkidentity.ShortID
-		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty,
+		cw.newHistoryMsg(chatLog.Mode, chatLog.From, chatLog.Message, empty,
 			time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me,
 			chatLog.Internal)
 	}
@@ -1424,15 +1424,15 @@ func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID, funds 
 
 // pm sends the given pm message in the specified window. Blocks until the
 // messsage is sent to the server.
-func (as *appState) pm(cw *chatWindow, msg string) {
-	m := cw.newUnsentPM(msg)
+func (as *appState) pm(cw *chatWindow, mode rpc.MessageMode, msg string) {
+	m := cw.newUnsentPM(mode, msg)
 	as.repaintIfActive(cw)
 
 	var err error
 	var progrChan chan client.SendProgress
 	if cw.isGC {
 		progrChan = make(chan client.SendProgress)
-		err = as.c.GCMessage(cw.gc, msg, rpc.MessageModeNormal, progrChan)
+		err = as.c.GCMessage(cw.gc, msg, mode, progrChan)
 	} else {
 		err = as.c.PM(cw.uid, msg)
 	}
@@ -2251,7 +2251,7 @@ func (as *appState) canPayServerOps() bool {
 
 // msgInActiveWindow is called to handle a non-command msg in the currently
 // active window (pm in private chats, gc msg in gc chats, etc).
-func (as *appState) msgInActiveWindow(msg string) {
+func (as *appState) msgInActiveWindow(mode rpc.MessageMode, msg string) {
 	if msg == "" {
 		return
 	}
@@ -2285,7 +2285,7 @@ func (as *appState) msgInActiveWindow(msg string) {
 
 	cw := as.chatWindows[as.activeCW]
 	as.chatWindowsMtx.Unlock()
-	go as.pm(cw, msg)
+	go as.pm(cw, mode, msg)
 }
 
 func (as *appState) channelBalance() (dcrutil.Amount, dcrutil.Amount, dcrutil.Amount) {

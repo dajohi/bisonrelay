@@ -439,6 +439,7 @@ func parseMsgIntoElements(msg string, mention string) []*chatMsgElLine {
 type chatMsg struct {
 	ts       time.Time
 	sent     bool
+	mode     rpc.MessageMode
 	msg      string
 	elements []*chatMsgElLine
 	mine     bool
@@ -504,9 +505,10 @@ func (cw *chatWindow) appendHistoryMsg(msg *chatMsg) {
 	cw.Unlock()
 }
 
-func (cw *chatWindow) newUnsentPM(msg string) *chatMsg {
+func (cw *chatWindow) newUnsentPM(mode rpc.MessageMode, msg string) *chatMsg {
 	m := &chatMsg{
 		mine:     true,
+		mode:     mode,
 		elements: parseMsgIntoElements(msg, ""),
 		//msg:  msg,
 		ts:   time.Now(),
@@ -519,6 +521,7 @@ func (cw *chatWindow) newUnsentPM(msg string) *chatMsg {
 func (cw *chatWindow) newInternalMsg(msg string, args ...interface{}) *chatMsg {
 	m := &chatMsg{
 		internal: true,
+		mode:     rpc.MessageModeNormal,
 		elements: parseMsgIntoElements(fmt.Sprintf(msg, args...), ""),
 		//msg:      msg,
 		ts: time.Now(),
@@ -550,10 +553,11 @@ func (cw *chatWindow) newHelpMsg(f string, args ...interface{}) {
 	})
 }
 
-func (cw *chatWindow) newRecvdMsg(from, msg string, fromUID *zkidentity.ShortID, ts time.Time) *chatMsg {
+func (cw *chatWindow) newRecvdMsg(mode rpc.MessageMode, from, msg string, fromUID *zkidentity.ShortID, ts time.Time) *chatMsg {
 
 	m := &chatMsg{
 		mine: false,
+		mode: mode,
 		//msg: msg,
 		elements: parseMsgIntoElements(msg, cw.me),
 		ts:       ts,
@@ -582,9 +586,10 @@ func (cw *chatWindow) replacePage(nick string, fr clientdb.FetchedResource) {
 	cw.Unlock()
 }
 
-func (cw *chatWindow) newHistoryMsg(from, msg string, fromUID *zkidentity.ShortID,
+func (cw *chatWindow) newHistoryMsg(mode rpc.MessageMode, from, msg string, fromUID *zkidentity.ShortID,
 	ts time.Time, mine, internal bool) *chatMsg {
 	m := &chatMsg{
+		mode: mode,
 		mine: mine,
 		//msg: msg,
 		elements: parseMsgIntoElements(msg, cw.me),
