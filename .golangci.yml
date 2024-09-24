@@ -4,15 +4,16 @@ run:
     - e2elegacylntest
     - dcrlnde2e
 
-
 linters:
   disable-all: true
   enable:
     - asciicheck
     - bidichk
     - bodyclose
+    - dupword
     - durationcheck
     - errchkjson
+    - errorlint
     - exportloopref
     - gofmt
     - goimports
@@ -22,14 +23,18 @@ linters:
     - ineffassign
     - makezero
     - misspell
+    - nilerr
+    - nilnil
     - noctx
     - nosprintfhostport
     - reassign
+    - revive
     - rowserrcheck
+    - staticcheck
     - sqlclosecheck
+    - tenv
     - tparallel
     - typecheck
     - unconvert
     - unused
-    - vetshadow
     - wastedassign
