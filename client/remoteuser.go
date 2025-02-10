@@ -387,6 +387,21 @@ func (ru *RemoteUser) sendTransitive(payload interface{}, payType string,
 	return ru.sendRMPriority(tm, payEvent, priority, nil)
 }
 
+// sendStorePurchaseRequest sends a store purchase request to this remote user.
+func (ru *RemoteUser) sendPurchaseOrderRequest(id, payType string, items []rpc.RMPurchaseOrderItem) error {
+	po := rpc.RMPurchaseOrderRequest{
+		ID:      id,
+		PayType: payType,
+		Items:   items,
+	}
+	return ru.sendRM(po, "sendPurchaseOrderRequest")
+}
+
+// sendPurchaseOrderReply
+func (ru *RemoteUser) SendPurchaseOrderReply(por rpc.RMPurchaseOrderReply) error {
+	return ru.sendRM(por, "sendPurchaseOrderReply")
+}
+
 // sendPM sends a private message to this remote user.
 func (ru *RemoteUser) sendPM(msg string) error {
 	return ru.sendRMPriority(rpc.RMPrivateMessage{

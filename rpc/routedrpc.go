@@ -269,6 +269,12 @@ func ComposeCompressedRM(fromSigner MessageSigner, rm interface{}, zlibLevel int
 	case RMProfileUpdate:
 		h.Command = RMCProfileUpdate
 
+	case RMPurchaseOrderRequest:
+		h.Command = RMCPurchaseOrderRequest
+
+	case RMPurchaseOrderReply:
+		h.Command = RMCPurchaseOrderReply
+
 	// Handshake
 	case RMHandshakeSYN:
 		h.Command = RMCHandshakeSYN
@@ -563,6 +569,16 @@ func DecomposeRM(msgVerifier MessageVerifier, mb []byte, maxDecompressSize uint)
 		var rmpu RMProfileUpdate
 		err = pmd.Decode(&rmpu)
 		payload = rmpu
+
+	case RMCPurchaseOrderRequest:
+		var po RMPurchaseOrderRequest
+		err = pmd.Decode(&po)
+		payload = po
+
+	case RMCPurchaseOrderReply:
+		var por RMPurchaseOrderReply
+		err = pmd.Decode(&por)
+		payload = por
 
 	// Handshake
 	case RMCHandshakeSYN:
@@ -1304,3 +1320,32 @@ type RMProfileUpdate struct {
 
 // RMCProfileUpdate is the command for a RMProfileUpdate.
 const RMCProfileUpdate = "profileupdt"
+
+type RMPurchaseOrderItem struct {
+	SKU      string   `json:"sku"`
+	Quantity uint32   `json:"qty"`
+	Price    *float64 `json:"price,omitempty"` // Set by storefront only.
+}
+
+// RMPurchaseOrderRequest is a message sent by a client when it wants to
+// purchase an item from a storefront.
+type RMPurchaseOrderRequest struct {
+	ID      string                `json:"id"`
+	PayType string                `json:"paytype"`
+	Items   []RMPurchaseOrderItem `json:"items"`
+}
+
+// RMCPurchaseOrderRequest is the command for RMPurchaseOrderRequest.
+const RMCPurchaseOrderRequest = "porqst"
+
+// RMPurchaseOrderReply is a message sent by a storefront when replying
+// to a purchase order request.
+type RMPurchaseOrderReply struct {
+	Request RMPurchaseOrderRequest `json:"po"`
+	// Total specifies the amount to pay in DCR Atoms.
+	Total int64  `json:"total"`
+	PayTo string `json:"payto"`
+}
+
+// RMCPurchaseOrderReply is the command for RMPurchaseOrderReply.
+const RMCPurchaseOrderReply = "poreply"

@@ -822,3 +822,13 @@ func (c *Client) restartTrackGeneratedTipInvoices(ctx context.Context) error {
 
 	return nil
 }
+
+func (c *Client) handlePurchaseOrderRequest(ru *RemoteUser, po rpc.RMPurchaseOrderRequest) error {
+	c.ntfns.notifyOnPurchaseOrderRequest(ru, po, time.Now())
+	return nil
+}
+
+func (c *Client) handlePurchaseOrderReply(ru *RemoteUser, por rpc.RMPurchaseOrderReply) error {
+	c.ntfns.notifyOnPurchaseOrderReply(ru, por, time.Now())
+	return nil
+}

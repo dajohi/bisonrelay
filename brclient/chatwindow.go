@@ -58,6 +58,11 @@ func (ff *formField) viewable() bool {
 	switch ff.typ {
 	case "intinput", "submit", "txtinput":
 		return true
+	case "hidden":
+		if ff.name == "price" {
+			return true
+		}
+		return false
 	default:
 		return false
 	}
@@ -129,6 +134,12 @@ func (ff *formField) view() string {
 		}
 	case "intinput":
 		b.WriteString(fmt.Sprintf("%d", ff.value))
+	case "hidden":
+		if ff.name == "price" {
+			b.WriteString(fmt.Sprintf("Price: %s", ff.value))
+			break
+		}
+		fallthrough
 	default:
 		if ff.value != nil {
 			b.WriteString(fmt.Sprintf("%v", ff.value))

@@ -20,6 +20,18 @@ import (
 // list, then add a notifyX() to NotificationManager and initialize a new
 // container in NewNotificationManager().
 
+const onPurchaseOrderRequestNtfnType = "onPurchaseOrderRequest"
+
+type OnPurchaseOrderRequestNtfn func(*RemoteUser, rpc.RMPurchaseOrderRequest, time.Time)
+
+func (_ OnPurchaseOrderRequestNtfn) typ() string { return onPurchaseOrderRequestNtfnType }
+
+const onPurchaseOrderReplyNtfnType = "onPurchaseOrderReply"
+
+type OnPurchaseOrderReplyNtfn func(*RemoteUser, rpc.RMPurchaseOrderReply, time.Time)
+
+func (_ OnPurchaseOrderReplyNtfn) typ() string { return onPurchaseOrderReplyNtfnType }
+
 const onPMNtfnType = "onPM"
 
 // OnPMNtfn is the handler for received private messages.
@@ -747,6 +759,20 @@ func (nmgr *NotificationManager) notifyTest() {
 		visit(func(h onTestNtfn) { h() })
 }
 
+func (nmgr *NotificationManager) notifyOnPurchaseOrderRequest(user *RemoteUser, pm rpc.RMPurchaseOrderRequest, ts time.Time) {
+	nmgr.handlers[onPurchaseOrderRequestNtfnType].(*handlersFor[OnPurchaseOrderRequestNtfn]).
+		visit(func(h OnPurchaseOrderRequestNtfn) { h(user, pm, ts) })
+
+	nmgr.addUINtfn(user.ID(), user.Nick(), UINtfnPM, "Received purchase order", ts)
+}
+
+func (nmgr *NotificationManager) notifyOnPurchaseOrderReply(user *RemoteUser, pm rpc.RMPurchaseOrderReply, ts time.Time) {
+	nmgr.handlers[onPurchaseOrderReplyNtfnType].(*handlersFor[OnPurchaseOrderReplyNtfn]).
+		visit(func(h OnPurchaseOrderReplyNtfn) { h(user, pm, ts) })
+
+	nmgr.addUINtfn(user.ID(), user.Nick(), UINtfnPM, "Received purchase order reply", ts)
+}
+
 func (nmgr *NotificationManager) notifyOnPM(user *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 	nmgr.handlers[onPMNtfnType].(*handlersFor[OnPMNtfn]).
 		visit(func(h OnPMNtfn) { h(user, pm, ts) })
@@ -1013,23 +1039,25 @@ func NewNotificationManager() *NotificationManager {
 			onTransitiveEventType:    &handlersFor[OnTransitiveEvent]{},
 			onUINtfnType:             &handlersFor[OnUINotification]{},
 
-			onPostSubscriberUpdated:    &handlersFor[OnPostSubscriberUpdated]{},
-			onPostsListReceived:        &handlersFor[OnPostsListReceived]{},
-			onGCVersionWarningType:     &handlersFor[OnGCVersionWarning]{},
-			onJoinedGCNtfnType:         &handlersFor[OnJoinedGCNtfn]{},
-			onAddedGCMembersNtfnType:   &handlersFor[OnAddedGCMembersNtfn]{},
-			onRemovedGCMembersNtfnType: &handlersFor[OnRemovedGCMembersNtfn]{},
-			onGCUpgradedNtfnType:       &handlersFor[OnGCUpgradedNtfn]{},
-			onInvitedToGCNtfnType:      &handlersFor[OnInvitedToGCNtfn]{},
-			onGCInviteAcceptedNtfnType: &handlersFor[OnGCInviteAcceptedNtfn]{},
-			onGCUserPartedNtfnType:     &handlersFor[OnGCUserPartedNtfn]{},
-			onGCKilledNtfnType:         &handlersFor[OnGCKilledNtfn]{},
-			onGCAdminsChangedNtfnType:  &handlersFor[OnGCAdminsChangedNtfn]{},
-			onContentListReceived:      &handlersFor[OnContentListReceived]{},
-			onFileDownloadCompleted:    &handlersFor[OnFileDownloadCompleted]{},
-			onFileDownloadProgress:     &handlersFor[OnFileDownloadProgress]{},
-			onServerUnwelcomeError:     &handlersFor[OnServerUnwelcomeError]{},
-			onRequestingMediateIDType:  &handlersFor[OnRequestingMediateID]{},
+			onPurchaseOrderRequestNtfnType: &handlersFor[OnPurchaseOrderRequestNtfn]{},
+			onPurchaseOrderReplyNtfnType:   &handlersFor[OnPurchaseOrderReplyNtfn]{},
+			onPostSubscriberUpdated:        &handlersFor[OnPostSubscriberUpdated]{},
+			onPostsListReceived:            &handlersFor[OnPostsListReceived]{},
+			onGCVersionWarningType:         &handlersFor[OnGCVersionWarning]{},
+			onJoinedGCNtfnType:             &handlersFor[OnJoinedGCNtfn]{},
+			onAddedGCMembersNtfnType:       &handlersFor[OnAddedGCMembersNtfn]{},
+			onRemovedGCMembersNtfnType:     &handlersFor[OnRemovedGCMembersNtfn]{},
+			onGCUpgradedNtfnType:           &handlersFor[OnGCUpgradedNtfn]{},
+			onInvitedToGCNtfnType:          &handlersFor[OnInvitedToGCNtfn]{},
+			onGCInviteAcceptedNtfnType:     &handlersFor[OnGCInviteAcceptedNtfn]{},
+			onGCUserPartedNtfnType:         &handlersFor[OnGCUserPartedNtfn]{},
+			onGCKilledNtfnType:             &handlersFor[OnGCKilledNtfn]{},
+			onGCAdminsChangedNtfnType:      &handlersFor[OnGCAdminsChangedNtfn]{},
+			onContentListReceived:          &handlersFor[OnContentListReceived]{},
+			onFileDownloadCompleted:        &handlersFor[OnFileDownloadCompleted]{},
+			onFileDownloadProgress:         &handlersFor[OnFileDownloadProgress]{},
+			onServerUnwelcomeError:         &handlersFor[OnServerUnwelcomeError]{},
+			onRequestingMediateIDType:      &handlersFor[OnRequestingMediateID]{},
 
 			onKXSearchCompletedNtfnType:       &handlersFor[OnKXSearchCompleted]{},
 			onInvoiceGenFailedNtfnType:        &handlersFor[OnInvoiceGenFailedNtfn]{},

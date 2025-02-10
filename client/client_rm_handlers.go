@@ -176,6 +176,12 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	case rpc.RMProfileUpdate:
 		return c.handleProfileUpdate(ru, p)
 
+	case rpc.RMPurchaseOrderRequest:
+		return c.handlePurchaseOrderRequest(ru, p)
+
+	case rpc.RMPurchaseOrderReply:
+		return c.handlePurchaseOrderReply(ru, p)
+
 	case rpc.RMGroupInvite:
 		return c.handleGCInvite(ru, p)
 

@@ -1420,6 +1420,20 @@ func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID, funds 
 	})
 }
 
+func (as *appState) purchaseRequest(uid client.UserID, paytype simplestore.PayType, sku string, quantity uint32, usdPrice float64) {
+	items := []rpc.RMPurchaseOrderItem{
+		{
+			SKU:      sku,
+			Quantity: quantity,
+		},
+	}
+	err := as.c.PurchaseOrderRequest(uid, string(paytype), items, usdPrice)
+	if err != nil {
+		as.cwHelpMsg("Unable to send a purchase order: %v", err)
+		return
+	}
+}
+
 // pm sends the given pm message in the specified window. Blocks until the
 // messsage is sent to the server.
 func (as *appState) pm(cw *chatWindow, msg string) {
@@ -2851,6 +2865,80 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			case <-as.ctx.Done():
 			}
 		}()
+	}))
+
+	ntfns.RegisterSync(client.OnPurchaseOrderRequestNtfn(func(user *client.RemoteUser, msg rpc.RMPurchaseOrderRequest, ts time.Time) {
+		if user == nil {
+			as.diagMsg("Received purchase order from unknown user")
+			return
+		}
+		nick := user.Nick()
+
+		if as.sstore == nil {
+			as.diagMsg("Received purchase order from %q but simplestore is disabled", nick)
+			return
+		}
+		as.diagMsg("Received purchase request from %q", nick)
+
+		err := as.sstore.PurchaseOrderRequest(as.ctx, user.ID(), msg)
+		if err != nil {
+			as.diagMsg("Failed to process purchase order from %q: %v", nick, err)
+			return
+		}
+	}))
+
+	ntfns.RegisterSync(client.OnPurchaseOrderReplyNtfn(func(user *client.RemoteUser, msg rpc.RMPurchaseOrderReply, ts time.Time) {
+		if as.lnRPC == nil {
+			return
+		}
+
+		if user == nil {
+			as.diagMsg("Received purchase order reply from unknown user")
+			return
+		}
+		nick := user.Nick()
+
+		price, err := as.c.PurchaseOrderAck(msg.Request.ID)
+		if err != nil {
+			as.diagMsg("failed to handle purchase order id %q from %q: %v",
+				msg.Request.ID, nick, err)
+			return
+		}
+
+		as.diagMsg("Received purchase order reply from %q for PO %q", nick, msg.Request.ID)
+		if dcrutil.Amount(msg.Total) > price {
+			as.diagMsg("Purchase order reply for %q has an invalid price: %v > %v",
+				msg.Request.ID, msg.Total, price)
+			return
+		}
+
+		payreq := strings.TrimPrefix(msg.PayTo, "lnpay://")
+		as.diagMsg("Attempting to pay purchase order %q", msg.Request.ID)
+		go func() {
+			pc, err := as.lnRPC.SendPayment(as.ctx)
+			if err != nil {
+				as.diagMsg("PC: %v", err)
+				return
+			}
+			req := &lnrpc.SendRequest{
+				PaymentRequest: payreq,
+			}
+			err = pc.Send(req)
+			if err != nil {
+				as.diagMsg("Unable to start payment: %v", err)
+			}
+			res, err := pc.Recv()
+			if err != nil {
+				as.diagMsg("PC receive error: %v", err)
+				return
+			}
+			if res.PaymentError != "" {
+				as.diagMsg("Payment error: %s", res.PaymentError)
+				return
+			}
+			as.diagMsg("Payment done!")
+		}()
+
 	}))
 
 	ntfns.Register(client.OnPostRcvdNtfn(func(user *client.RemoteUser,

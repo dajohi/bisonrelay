@@ -103,19 +103,20 @@ type OrderComment struct {
 }
 
 type Order struct {
-	ID           OrderID           `json:"id"`
-	User         clientintf.UserID `json:"user"`
-	Cart         Cart              `json:"cart"`
-	Status       OrderStatus       `json:"status"`
-	PlacedTS     time.Time         `json:"placed_ts"`
-	ResolvedTS   *time.Time        `json:"resolved_ts"`
-	ShipCharge   float64           `json:"ship_charge"`
-	ExchangeRate float64           `json:"exchange_rate"`
-	PayType      PayType           `json:"pay_type"`
-	Invoice      string            `json:"invoice"`
-	ShipAddr     *ShippingAddress  `json:"shipping"`
-	Comments     []OrderComment    `json:"comments"`
-	ExpiresTS    time.Time         `json:"expires_ts"`
+	ID              OrderID           `json:"id"`
+	User            clientintf.UserID `json:"user"`
+	Cart            Cart              `json:"cart"`
+	Status          OrderStatus       `json:"status"`
+	PlacedTS        time.Time         `json:"placed_ts"`
+	ResolvedTS      *time.Time        `json:"resolved_ts"`
+	ShipCharge      float64           `json:"ship_charge"`
+	ExchangeRate    float64           `json:"exchange_rate"`
+	PayType         PayType           `json:"pay_type"`
+	Invoice         string            `json:"invoice"`
+	ShipAddr        *ShippingAddress  `json:"shipping"`
+	Comments        []OrderComment    `json:"comments"`
+	ExpiresTS       time.Time         `json:"expires_ts"`
+	PurchaseOrderID string            `json:"poid"`
 }
 
 // Total returns the total amount, with 2 decimal places accuracy.

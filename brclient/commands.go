@@ -20,6 +20,7 @@ import (
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/client/resources/simplestore"
 	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
@@ -2457,6 +2458,50 @@ var lnCommands = []tuicmd{
 				return fmt.Errorf("LN client not configured")
 			}
 			as.sendMsg(msgLNRequestRecv{})
+			return nil
+		},
+	},
+	{
+		cmd:           "purchaseorder",
+		usage:         "<user> <sku> <quantity> <expected-usd-total>",
+		usableOffline: false,
+		descr:         "Send a purchase order request to a storefront",
+		handler: func(args []string, as *appState) error {
+			if as.lnRPC == nil {
+				return fmt.Errorf("LN client not configured")
+			}
+			if len(args) < 1 {
+				return usageError{msg: "Nick or ID cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "SKU cannot be empty"}
+			}
+			if len(args) < 3 {
+				return usageError{msg: "Quantity cannot be empty"}
+			}
+			if len(args) < 4 {
+				return usageError{msg: "Expected USD total cannot be empty"}
+			}
+
+			ru, err := as.c.UserByNick(args[0])
+			if err != nil {
+				return err
+			}
+			quantity, err := strconv.ParseUint(args[2], 0, 32)
+			if err != nil {
+				return err
+			}
+			expectedUSDTotal, err := strconv.ParseFloat(args[3], 64)
+			if err != nil {
+				return err
+			}
+			go as.purchaseRequest(ru.ID(), simplestore.PayTypeLN, args[1], uint32(quantity), expectedUSDTotal)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
 			return nil
 		},
 	},

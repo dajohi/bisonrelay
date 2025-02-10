@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/companyzero/bisonrelay/client/resources/simplestore"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"golang.org/x/exp/maps"
 )
@@ -315,12 +316,46 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					uid := cw.page.UID
 					action := cw.selEl.form.action()
 
-					err := mws.as.fetchPage(uid, action,
-						cw.page.SessionID, cw.page.PageID, cw.selEl.form)
-					if err != nil {
-						mws.as.diagMsg("Unable to fetch page: %v", err)
+				pickAction:
+					switch action {
+					case "oneclick":
+						var sku string
+						var price float64
+						for _, field := range cw.selEl.form.fields {
+							if field.name == "sku" {
+								skuS, ok := field.value.(string)
+								if !ok {
+									mws.as.diagMsg("Unable to parse sku")
+									break pickAction
+								}
+								sku = skuS
+							}
+							if field.name == "price" {
+								priceS, ok := field.value.(string)
+								if !ok {
+									mws.as.diagMsg("Unable to typecast price: %T")
+									break pickAction
+								}
+								var err error
+								price, err = strconv.ParseFloat(priceS, 64)
+								if err != nil {
+									mws.as.diagMsg("Unable to get price: %v", err)
+									break pickAction
+								}
+							}
+						}
+						if sku != "" {
+							go mws.as.purchaseRequest(uid, simplestore.PayTypeLN, sku, 1, price)
+						} else {
+							mws.as.diagMsg("No SKU found")
+						}
+					default:
+						err := mws.as.fetchPage(uid, action,
+							cw.page.SessionID, cw.page.PageID, cw.selEl.form)
+						if err != nil {
+							mws.as.diagMsg("Unable to fetch page: %v", err)
+						}
 					}
-
 				}
 
 				break

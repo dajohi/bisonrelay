@@ -60,6 +60,18 @@ func (s *Store) handleProduct(ctx context.Context, uid clientintf.UserID,
 		return s.handleNotFound(ctx, uid, request)
 	}
 
+	var exchangeRate float64
+	if s.cfg.ExchangeRateProvider != nil {
+		exchangeRate = s.cfg.ExchangeRateProvider()
+	}
+	if exchangeRate <= 0 {
+		s.log.Warnf("order rejected due to invalid exchange rate")
+		return &rpc.RMFetchResourceReply{
+			Status: rpc.ResourceStatusBadRequest,
+			Data:   []byte("store has an invalid exchange rate"),
+		}, nil
+	}
+
 	w := &bytes.Buffer{}
 	err := s.tmpl.ExecuteTemplate(w, prodTmplFile, prod)
 	if err != nil {
@@ -195,6 +207,165 @@ func (s *Store) handleCart(ctx context.Context, uid clientintf.UserID,
 	}, nil
 }
 
+func (s *Store) PurchaseOrderRequest(ctx context.Context, uid clientintf.UserID, po rpc.RMPurchaseOrderRequest) error {
+	var exchangeRate float64
+	if s.cfg.ExchangeRateProvider != nil {
+		exchangeRate = s.cfg.ExchangeRateProvider()
+	}
+	if exchangeRate <= 0 {
+		return fmt.Errorf("invalid exchange rate")
+	}
+	if po.ID == "" {
+		return fmt.Errorf("purchase order id not set")
+	}
+	if len(po.Items) == 0 {
+		return fmt.Errorf("no items")
+	}
+	ru, err := s.c.UserByID(uid)
+	if err != nil {
+		return err
+	}
+
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	now := time.Now()
+	cart := Cart{
+		Updated: now,
+	}
+
+	for i := range po.Items {
+		prod, ok := s.products[po.Items[i].SKU]
+		if !ok {
+			return fmt.Errorf("item %q not found", po.Items[i].SKU)
+		}
+		if po.Items[i].Quantity <= 0 {
+			return fmt.Errorf("quantity not set for sku %q", po.Items[i].SKU)
+		}
+		cart.Items = append(cart.Items, &CartItem{
+			Product:  prod,
+			Quantity: po.Items[i].Quantity,
+		})
+
+		// set price.
+		price := prod.Price * float64(po.Items[i].Quantity)
+		po.Items[i].Price = &price
+	}
+
+	order := &Order{
+		User:            uid,
+		Cart:            cart,
+		Status:          StatusPlaced,
+		PlacedTS:        now,
+		ShipCharge:      0, // s.cfg.ShipCharge,
+		ShipAddr:        nil,
+		ExpiresTS:       now.Add(time.Hour),
+		ExchangeRate:    exchangeRate,
+		PayType:         PayType(po.PayType),
+		PurchaseOrderID: po.ID,
+	}
+	totalDCR := order.TotalDCR()
+
+	switch PayType(po.PayType) {
+	case PayTypeOnChain:
+		addr, err := s.c.OnchainRecvAddrForUser(order.User, s.cfg.Account)
+		if err != nil {
+			return fmt.Errorf("failed to generate on-chain address: %w", err)
+		}
+		order.Invoice = addr
+
+	case PayTypeLN:
+		if s.lnpc == nil {
+			return fmt.Errorf("failed to generate LN invoice")
+		}
+		invoice, err := s.lnpc.GetInvoice(ctx, int64(totalDCR*1000), nil)
+		if err != nil {
+			return fmt.Errorf("failed to generate invoice: %w", err)
+		}
+		order.Invoice = invoice
+
+	default:
+		return fmt.Errorf("unsupported paytype")
+	}
+
+	// Create the order.
+	orderDir := filepath.Join(s.root, ordersDir, uid.String())
+	lastID, err := orderFnamePattern.Last(orderDir)
+	if err != nil {
+		return err
+	}
+	id := lastID.ID + 1
+	order.ID = OrderID(id)
+
+	// Save order.
+	orderFname := filepath.Join(orderDir, orderFnamePattern.FilenameFor(id))
+	err = jsonfile.Write(orderFname, order, s.log)
+	if err != nil {
+		return err
+	}
+
+	// Track pending invoice or onchain addr for payment.
+	if order.Invoice != "" {
+		pendingFname := filepath.Join(s.root, pendingInvoicesDir, fmt.Sprintf("%s-%s", uid, order.ID))
+		if err := jsonfile.Write(pendingFname, "", s.log); err != nil {
+			return fmt.Errorf("unable to write pending invoice file: %v", err)
+		}
+		select {
+		case s.invoiceCreatedChan <- order:
+		case <-s.runCtx.Done():
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
+	// Build the message to send to the remote user, and present it to the
+	// UI.
+	var b strings.Builder
+	wpm := func(f string, args ...interface{}) {
+		b.WriteString(fmt.Sprintf(f, args...))
+	}
+
+	wpm("Thank you for submitting purchase order %q.  Your order ID is #%d\n",
+		order.PurchaseOrderID, order.ID)
+	wpm("The following were the items in your order:\n")
+	for _, item := range order.Cart.Items {
+		totalItemUSDCents := int64(item.Quantity) * int64(item.Product.Price*100)
+		wpm("  SKU %s - %s - %d units - $%.2f/item - $%.2f\n",
+			item.Product.SKU, item.Product.Title,
+			item.Quantity, item.Product.Price,
+			float64(totalItemUSDCents)/100)
+	}
+
+	if order.Cart.HasCharges() && s.cfg.ShipCharge > 0 {
+		wpm("Total item amount: $%.2f USD\n", order.Cart.Total())
+		wpm("Shipping and handling charge: $%.2f USD\n", s.cfg.ShipCharge)
+		wpm("Total amount: $%.2f USD\n", order.Total())
+	} else {
+		wpm("Total amount: $%.2f USD\n", order.Total())
+	}
+
+	if totalDCR > 0 {
+		wpm("Using the current exchange rate of %.2f USD/DCR, your order is "+
+			"%s, valid for the next hour (expires %s)\n",
+			order.ExchangeRate, totalDCR, order.ExpiresTS.Format("Mon, 02 Jan 2006 15:04 MST"))
+	}
+
+	por := rpc.RMPurchaseOrderReply{
+		Request: po,
+		Total:   int64(totalDCR),
+		PayTo:   order.Invoice,
+	}
+	if err = ru.SendPurchaseOrderReply(por); err != nil {
+		return err
+	}
+
+	if s.cfg.OrderPlaced != nil {
+		s.cfg.OrderPlaced(order, b.String())
+	}
+
+	return nil
+}
+
 func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
 
@@ -210,12 +381,11 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		}, nil
 	}
 
-	cartFname := filepath.Join(s.root, cartsDir, uid.String())
-	var cart Cart
-
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
+	cartFname := filepath.Join(s.root, cartsDir, uid.String())
+	var cart Cart
 	err := jsonfile.Read(cartFname, &cart)
 	if err != nil && !errors.Is(err, jsonfile.ErrNotFound) {
 		return nil, err
