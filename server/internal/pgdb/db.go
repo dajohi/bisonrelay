@@ -116,6 +116,36 @@ type DB struct {
 	redeemedPushesPartitions map[string]struct{}
 }
 
+// sqlTxRO runs the provided function inside of a read-only SQL transaction
+// and will either rollback the transaction and return the error when a
+// non-nil error is returned from the provided function or commit the
+// transaction when a nil error is returned the provided function.
+func (db *DB) sqlTxRO(ctx context.Context, f func(tx pgx.Tx) error) (err error) {
+	tx, err := db.db.BeginTx(ctx, pgx.TxOptions{
+		AccessMode: pgx.ReadOnly,
+	})
+	if err != nil {
+		str := fmt.Sprintf("unable to start transaction: %v", err)
+		return contextError(ErrBeginTx, str, err)
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback(ctx)
+			panic(p)
+		}
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return
+		}
+		err = tx.Commit(ctx)
+		if err != nil {
+			str := fmt.Sprintf("unable to commit transaction: %v", err)
+			err = contextError(ErrCommitTx, str, err)
+		}
+	}()
+	return f(tx)
+}
+
 // sqlTx runs the provided function inside of SQL transaction and will either
 // rollback the transaction and return the error when a non-nil error is
 // returned from the provided function or commit the transaction when a nil
@@ -1524,10 +1554,6 @@ func Open(ctx context.Context, opts ...Option) (*DB, error) {
 		str := fmt.Sprintf("unable to open connection to database: %v", err)
 		return nil, contextError(ErrConnFailed, str, err)
 	}
-	if err := sqlDB.Ping(ctx); err != nil {
-		str := fmt.Sprintf("unable to communicate with database: %v", err)
-		return nil, contextError(ErrConnFailed, str, err)
-	}
 
 	db := &DB{
 		dbName:                   o.dbName,
@@ -1549,15 +1575,30 @@ func Open(ctx context.Context, opts ...Option) (*DB, error) {
 	// the overall sanity.  Sanity checks include things such as having the
 	// required settings configured, existence of required tables along with
 	// being configured with their expected tablespaces.
-	err = db.sqlTx(ctx, func(tx pgx.Tx) error {
-		if err := db.checkDatabaseInitialized(ctx, tx); err != nil {
-			return err
-		}
-		if err := db.initDB(ctx, tx); err != nil {
-			return err
-		}
-		return db.checkDatabaseSanity(ctx, tx)
-	})
+	isMaster, err := db.IsMaster(ctx)
+	if err != nil {
+		str := fmt.Sprintf("failed to check master status: %v", err)
+		return nil, contextError(ErrConnFailed, str, err)
+	}
+	if isMaster {
+		err = db.sqlTx(ctx, func(tx pgx.Tx) error {
+			if err := db.checkDatabaseInitialized(ctx, tx); err != nil {
+				return err
+			}
+			if err := db.initDB(ctx, tx); err != nil {
+				return err
+			}
+			return db.checkDatabaseSanity(ctx, tx)
+		})
+	} else {
+		err = db.sqlTxRO(ctx, func(tx pgx.Tx) error {
+			if err := db.checkDatabaseInitialized(ctx, tx); err != nil {
+				return err
+			}
+			return db.checkDatabaseSanity(ctx, tx)
+		})
+
+	}
 	if err != nil {
 		sqlDB.Close()
 		return nil, err
