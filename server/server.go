@@ -89,6 +89,7 @@ type ZKS struct {
 	logConn     slog.Logger
 	dbCtx       context.Context
 	dbCtxCancel func()
+	isMaster    atomic.Bool
 
 	// pingLimit is the max time between pings.
 	pingLimit time.Duration
@@ -244,8 +245,6 @@ func (z *ZKS) welcome(kx *session.KX) error {
 }
 
 func (z *ZKS) preSession(ctx context.Context, conn net.Conn) {
-	z.log.Debugf("incoming connection: %v", conn.RemoteAddr())
-
 	// Max time before we expect an InitialCmdSession and will drop the
 	// connection if we don't receive one.
 	initSessTimeout := z.settings.InitSessTimeout
@@ -354,6 +353,13 @@ func (z *ZKS) listen(ctx context.Context, l net.Listener) error {
 		if err != nil {
 			return err
 		}
+		z.log.Infof("incoming connection: %v", conn.RemoteAddr())
+		if !z.isMaster.Load() {
+			z.log.Infof("closing connection: %v - database is not master",
+				conn.RemoteAddr())
+			conn.Close()
+			continue
+		}
 		conn.(*net.TCPConn).SetKeepAlive(true)
 		go z.preSession(ctx, tls.Server(conn, &config))
 	}
@@ -376,24 +382,26 @@ func (z *ZKS) expirationLoop(ctx context.Context) error {
 
 	for {
 		now := z.now().UTC()
-		expirationDate := now.Add(-expirationLimit)
 
-		for i := nbPriorExpirations - 1; i >= 0; i-- {
-			date := expirationDate.Add(-time.Duration(i) * day)
+		if z.isMaster.Load() {
+			expirationDate := now.Add(-expirationLimit)
 
-			z.log.Debugf("Attempting to expire data from %s",
-				date.Format("2006-01-02"))
-			count, err := z.db.Expire(ctx, date)
-			if err != nil {
-				return fmt.Errorf("unable to expire data from %s: %v",
-					date.Format("2006-01-02"), err)
-			}
-			if count > 0 {
-				z.log.Infof("Expired %d records from %s",
-					count, date.Format("2006-01-02"))
+			for i := nbPriorExpirations - 1; i >= 0; i-- {
+				date := expirationDate.Add(-time.Duration(i) * day)
+
+				z.log.Debugf("Attempting to expire data from %s",
+					date.Format("2006-01-02"))
+				count, err := z.db.Expire(ctx, date)
+				if err != nil {
+					return fmt.Errorf("unable to expire data from %s: %v",
+						date.Format("2006-01-02"), err)
+				}
+				if count > 0 {
+					z.log.Infof("Expired %d records from %s",
+						count, date.Format("2006-01-02"))
+				}
 			}
 		}
-
 		// Schedule expiration for the next day, UTC time.
 		whenNextExpire := time.Date(now.Year(), now.Month(), now.Day()+1,
 			0, 0, 0, 0, time.UTC)
@@ -448,13 +456,41 @@ func (z *ZKS) Run(ctx context.Context) error {
 		return firstErr
 	})
 
+	g.Go(func() error {
+		t := time.NewTicker(30 * time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-gctx.Done():
+				return nil
+			case <-t.C:
+				isMaster, err := z.db.IsMaster(gctx)
+				if err != nil {
+					z.log.Errorf("db.IsMaster failed: %v", err)
+				}
+				old := z.isMaster.Swap(isMaster)
+				if old != isMaster {
+					var status string
+					if isMaster {
+						status = "primary"
+					} else {
+						status = "secondary"
+					}
+					z.log.Infof("[DB] is now %s", status)
+				}
+				if !isMaster {
+					// disconnect all clients
+				}
+			}
+		}
+	})
 	// Run the expiration loop.
-	g.Go(func() error { return z.expirationLoop(ctx) })
+	g.Go(func() error { return z.expirationLoop(gctx) })
 
 	// Run the status api.
 	if z.lnRpc != nil && z.apiListen != nil {
-		g.Go(func() error { return z.refreshAPI(ctx) })
-		g.Go(func() error { return z.serveAPI(ctx) })
+		g.Go(func() error { return z.refreshAPI(gctx) })
+		g.Go(func() error { return z.serveAPI(gctx) })
 	}
 
 	// Listen for connections.
@@ -463,7 +499,7 @@ func (z *ZKS) Run(ctx context.Context) error {
 		g.Go(func() error {
 			err := z.listen(gctx, l)
 			select {
-			case <-ctx.Done():
+			case <-gctx.Done():
 				// Close() was requested, so ignore the error.
 				return nil
 			default:
@@ -506,13 +542,12 @@ func (z *ZKS) refreshAPI(ctx context.Context) error {
 			healthy := true
 
 			lnInfo, lnErr := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
-			isMaster, dbErr := z.db.IsMaster(ctx)
 			if lnErr != nil {
 				z.log.Errorf("[BACKEND] failed to get dcrlnd info: %v", lnErr)
 			}
-			if dbErr != nil {
-				z.log.Errorf("[BACKEND] failed to query db: %v", dbErr)
-			} else if isMaster {
+			var dbErr error
+			isMaster := z.isMaster.Load()
+			if isMaster {
 				healthy, dbErr = z.db.HealthCheck(ctx)
 			}
 			var apiStatusNode APIStatusNode
