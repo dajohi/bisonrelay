@@ -91,6 +91,10 @@ type ZKS struct {
 	dbCtxCancel func()
 	isMaster    atomic.Bool
 
+	// connection pool
+	sessionsMtx sync.Mutex
+	sessions    map[sessionID]*sessionContext
+
 	// pingLimit is the max time between pings.
 	pingLimit time.Duration
 	logPings  bool // Only set in some tests
@@ -328,6 +332,14 @@ loop:
 	z.log.Infof("Connection %v closed: %v", conn.RemoteAddr(), err)
 }
 
+func (z *ZKS) closeSessions() {
+	z.sessionsMtx.Lock()
+	for _, sess := range z.sessions {
+		sess.Close()
+	}
+	z.sessionsMtx.Unlock()
+}
+
 func (z *ZKS) listen(ctx context.Context, l net.Listener) error {
 	z.log.Debugf("Server Public ID: %v", spew.Sdump(z.id.Public))
 	cert, err := tls.LoadX509KeyPair(filepath.Join(z.settings.Root,
@@ -477,9 +489,10 @@ func (z *ZKS) Run(ctx context.Context) error {
 						status = "secondary"
 					}
 					z.log.Infof("[DB] is now %s", status)
-				}
-				if !isMaster {
-					// disconnect all clients
+
+					if !isMaster {
+						z.closeSessions()
+					}
 				}
 			}
 		}
