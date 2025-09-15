@@ -79,6 +79,11 @@ type Settings struct {
 	PGIndexTableSpace string
 	PGBulkTableSpace  string
 
+	// Postgres backup config
+	PGCmdPromote string
+	PGCmdDemote  string
+	PGSlotName   string
+
 	// RTDT config
 	RTDTServerAddr       string
 	RTDTServerPub        *zkidentity.FixedSizeSntrupPublicKey
@@ -292,6 +297,9 @@ func (s *Settings) Load(filename string) error {
 	get(&s.PGServerCA, "postgres", "serverca")
 	get(&s.PGIndexTableSpace, "postgres", "indexts")
 	get(&s.PGBulkTableSpace, "postgres", "bulkts")
+	get(&s.PGCmdPromote, "postgres", "cmdpromote")
+	get(&s.PGCmdDemote, "postgres", "cmddemote")
+	get(&s.PGSlotName, "postgres", "slotname")
 
 	get(&s.RTDTServerAddr, "rtdt", "serveraddress")
 
@@ -421,11 +429,25 @@ func (s *Settings) Load(filename string) error {
 	}
 
 	if !s.SeederDisable {
+		if !s.PGEnabled {
+			return fmt.Errorf("seeder only available with postgres backend")
+		}
 		if s.SeederAddr == "" {
 			return fmt.Errorf("no seeder address set")
 		}
 		if s.SeederToken == "" {
 			return fmt.Errorf("no seeder token set")
+		}
+		if !s.SeederDryRun {
+			if s.PGCmdPromote == "" {
+				return fmt.Errorf("postgres: cmdpromote not set")
+			}
+			if s.PGCmdDemote == "" {
+				return fmt.Errorf("postgres: cmdrewind not set")
+			}
+			if s.PGSlotName == "" {
+				return fmt.Errorf("postgres: slotname not set")
+			}
 		}
 	}
 

@@ -14,6 +14,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -538,13 +539,30 @@ func (z *ZKS) Run(ctx context.Context) error {
 								if old != reply.Master {
 									if reply.Master {
 										z.log.Warnf("[ws] pg_promote dryrun:%v", z.seederDryRun)
+										if !z.seederDryRun {
+											// promote db
+											cmd := exec.CommandContext(ctx, z.settings.PGCmdPromote)
+											if err := cmd.Run(); err != nil {
+												z.log.Errorf("promote failed: %v", err)
+											} else {
+												z.log.Infof("promote succeeded")
+											}
+										}
 									} else {
+										z.log.Warnf("[ws] brseeder says secondary dryrun:%v", z.seederDryRun)
 										if !z.seederDryRun {
 											// brseeder says we aren't master!
 											z.isMaster.Store(false)
 											z.closeSessions()
+
+											// demote db
+											cmd := exec.CommandContext(ctx, z.settings.PGCmdDemote)
+											if err := cmd.Run(); err != nil {
+												z.log.Errorf("demote failed: %v", err)
+												continue
+											}
+											z.log.Infof("demote succeeded")
 										}
-										z.log.Warnf("[ws] brseeder says secondary dryrun:%v", z.seederDryRun)
 									}
 								}
 							}
@@ -639,6 +657,7 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 			brpgdb.WithPassphrase(cfg.PGPassphrase),
 			brpgdb.WithBulkDataTablespace(cfg.PGBulkTableSpace),
 			brpgdb.WithIndexTablespace(cfg.PGIndexTableSpace),
+			brpgdb.WithSlotName(cfg.PGSlotName),
 		}
 		if cfg.PGServerCA != "" {
 			opts = append(opts, brpgdb.WithTLS(cfg.PGServerCA))
