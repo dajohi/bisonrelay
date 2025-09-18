@@ -77,6 +77,8 @@ func main() {
 	var serverMaster smi
 	serverMap := make(map[string]*server.CommandStatus)
 
+	var lastFailOver time.Time
+
 	const waitForMaster = 5 * time.Minute
 	timeStarted := time.Now()
 
@@ -152,22 +154,28 @@ func main() {
 
 		masterStatus := serverMap[serverMaster.token]
 
+		// dont switch if its been to recent.
+		tooRecent := !lastFailOver.IsZero() && time.Since(lastFailOver) <= time.Hour
+
 		// master disappeared for over a minute - switch
-		if now.Sub(time.Unix(masterStatus.LastUpdated, 0)) > time.Minute {
+		if !tooRecent && now.Sub(time.Unix(masterStatus.LastUpdated, 0)) > time.Minute {
 			logger.Warnf("master %v has been offline too long -- promoting %v", serverMaster.token, mytoken)
 			serverMaster = smi{token: mytoken}
+			lastFailOver = time.Now()
 			return true
 		}
-		if !serverMaster.dboffline.IsZero() &&
+		if !tooRecent && !serverMaster.dboffline.IsZero() &&
 			now.Sub(serverMaster.dboffline) > time.Minute {
 			logger.Warnf("master %v db has been offline too long -- promoting %v", serverMaster.token, mytoken)
 			serverMaster = smi{token: mytoken}
+			lastFailOver = time.Now()
 			return true
 		}
-		if !serverMaster.nodeoffline.IsZero() &&
+		if !tooRecent && !serverMaster.nodeoffline.IsZero() &&
 			now.Sub(serverMaster.nodeoffline) > time.Minute {
 			logger.Warnf("master %v dcrlnd has been offline too long -- promoting %v", serverMaster.token, mytoken)
 			serverMaster = smi{token: mytoken}
+			lastFailOver = time.Now()
 			return true
 		}
 
