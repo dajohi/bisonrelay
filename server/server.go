@@ -37,6 +37,7 @@ import (
 	"github.com/decred/slog"
 	"github.com/jrick/wsrpc/v2"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -62,6 +63,7 @@ type ZKS struct {
 	sync.Mutex
 	now         func() time.Time
 	listenAddrs []net.Addr // Actual addresses we're bound to
+	rateLimiter *rate.Limiter
 
 	// subscribers track which session is subscribed to which RVPoint.
 	subscribers map[ratchet.RVPoint]*sessionContext
@@ -378,6 +380,12 @@ func (z *ZKS) listen(ctx context.Context, l net.Listener) error {
 	z.listenAddrs = append(z.listenAddrs, l.Addr())
 	z.Unlock()
 	for {
+		if z.rateLimiter.Wait(ctx); err != nil {
+			if errors.Is(err, context.Canceled) {
+				return err
+			}
+			continue
+		}
 		conn, err := l.Accept()
 		if err != nil {
 			return err
@@ -717,6 +725,7 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 
 	z := &ZKS{
 		now:         time.Now,
+		rateLimiter: rate.NewLimiter(1, 3),
 		settings:    cfg,
 		logBknd:     logBknd,
 		log:         logBknd.logger("SERV"),
