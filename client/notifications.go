@@ -655,6 +655,18 @@ type OnRTDTJoinedInstantCall func(sessionRV zkidentity.ShortID)
 
 func (OnRTDTJoinedInstantCall) typ() string { return onRTDTJoinedInstantCallNtfnType }
 
+const onPurchaseOrderRequestNtfnType = "onPurchaseOrderRequest"
+
+type OnPurchaseOrderRequestNtfn func(*RemoteUser, rpc.RMPurchaseOrderRequest, time.Time)
+
+func (OnPurchaseOrderRequestNtfn) typ() string { return onPurchaseOrderRequestNtfnType }
+
+const onPurchaseOrderReplyNtfnType = "onPurchaseOrderReply"
+
+type OnPurchaseOrderReplyNtfn func(*RemoteUser, rpc.RMPurchaseOrderReply, time.Time)
+
+func (OnPurchaseOrderReplyNtfn) typ() string { return onPurchaseOrderReplyNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -1296,6 +1308,20 @@ func (nmgr *NotificationManager) notifyRTDTJoinedInstantCall(sessionRV zkidentit
 		visit(func(h OnRTDTJoinedInstantCall) { h(sessionRV) })
 }
 
+func (nmgr *NotificationManager) notifyOnPurchaseOrderRequest(user *RemoteUser, pm rpc.RMPurchaseOrderRequest, ts time.Time) {
+	nmgr.handlers[onPurchaseOrderRequestNtfnType].(*handlersFor[OnPurchaseOrderRequestNtfn]).
+		visit(func(h OnPurchaseOrderRequestNtfn) { h(user, pm, ts) })
+
+	nmgr.addUINtfn(user.ID(), user.Nick(), UINtfnPM, "Received purchase order", ts)
+}
+
+func (nmgr *NotificationManager) notifyOnPurchaseOrderReply(user *RemoteUser, pm rpc.RMPurchaseOrderReply, ts time.Time) {
+	nmgr.handlers[onPurchaseOrderReplyNtfnType].(*handlersFor[OnPurchaseOrderReplyNtfn]).
+		visit(func(h OnPurchaseOrderReplyNtfn) { h(user, pm, ts) })
+
+	nmgr.addUINtfn(user.ID(), user.Nick(), UINtfnPM, "Received purchase order reply", ts)
+}
+
 func NewNotificationManager() *NotificationManager {
 	nmgr := &NotificationManager{
 		uiConfig: UINotificationsConfig{
@@ -1374,6 +1400,8 @@ func NewNotificationManager() *NotificationManager {
 			onRTDTAdminCookiesRcvdNtfnType:      &handlersFor[OnRTDTAdminCookiesReceived]{},
 			onRTDTRTTCalculatedNtfnType:         &handlersFor[OnRTDTRTTCalculated]{},
 			onRTDTJoinedInstantCallNtfnType:     &handlersFor[OnRTDTJoinedInstantCall]{},
+			onPurchaseOrderRequestNtfnType:      &handlersFor[OnPurchaseOrderRequestNtfn]{},
+			onPurchaseOrderReplyNtfnType:        &handlersFor[OnPurchaseOrderReplyNtfn]{},
 		},
 	}
 	if !nmgr.uiTimer.Stop() {

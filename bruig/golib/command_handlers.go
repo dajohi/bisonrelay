@@ -861,6 +861,18 @@ func handleInitClient(handle uint32, args initClient) error {
 			return fmt.Errorf("unable to initialize simple store: %v", err)
 		}
 		resRouter.BindPrefixPath([]string{}, sstore)
+
+		ntfns.Register(client.OnPurchaseOrderRequestNtfn(func(user *client.RemoteUser, msg rpc.RMPurchaseOrderRequest, ts time.Time) {
+			err := sstore.PurchaseOrderRequest(cctx.ctx, user, msg, ts)
+			if err != nil {
+				cctx.log.Errorf("%v", err)
+				return
+			}
+		}))
+
+		ntfns.Register(client.OnPurchaseOrderReplyNtfn(func(user *client.RemoteUser, msg rpc.RMPurchaseOrderReply, ts time.Time) {
+		}))
+
 	case strings.HasPrefix(args.ResourcesUpstream, "pages:"):
 		path := args.ResourcesUpstream[len("pages:"):]
 		p := resources.NewFilesystemResource(path, logBknd.logger("PAGE"))

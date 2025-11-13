@@ -626,6 +626,28 @@ func (s *Store) runInvoiceWatcher(ctx context.Context) error {
 	}
 }
 
+func (s *Store) PurchaseOrderRequest(ctx context.Context, ru *client.RemoteUser, po rpc.RMPurchaseOrderRequest, ts time.Time) error {
+	if ru == nil {
+		return fmt.Errorf("unknown user")
+	}
+	if po.ID == "" {
+		return fmt.Errorf("purchase order id not set")
+	}
+	if len(po.Items) == 0 {
+		return fmt.Errorf("no items")
+	}
+
+	var exchangeRate float64
+	if s.cfg.ExchangeRateProvider != nil {
+		exchangeRate = s.cfg.ExchangeRateProvider()
+	}
+	if exchangeRate <= 0 {
+		return fmt.Errorf("invalid exchange rate")
+	}
+
+	return fmt.Errorf("not supported")
+}
+
 // Run the simple store functions.
 func (s *Store) Run(ctx context.Context) error {
 	chainParams, err := s.lnpc.ChainParams(ctx)

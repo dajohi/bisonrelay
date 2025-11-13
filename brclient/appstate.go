@@ -4102,6 +4102,20 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.sendMsg(msgOpenRTChatWin{})
 	}))
 
+	ntfns.RegisterSync(client.OnPurchaseOrderRequestNtfn(func(user *client.RemoteUser, msg rpc.RMPurchaseOrderRequest, ts time.Time) {
+		if as.sstore == nil {
+			return
+		}
+		err := as.sstore.PurchaseOrderRequest(as.ctx, user, msg, ts)
+		if err != nil {
+			as.diagMsg("%v", err)
+			return
+		}
+	}))
+
+	ntfns.RegisterSync(client.OnPurchaseOrderReplyNtfn(func(user *client.RemoteUser, msg rpc.RMPurchaseOrderReply, ts time.Time) {
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
