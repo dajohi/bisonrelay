@@ -3,6 +3,7 @@ module github.com/companyzero/bisonrelay
 go 1.23
 
 require (
+	decred.org/dcrwallet/v4 v4.3.1
 	github.com/BurntSushi/toml v0.3.1
 	github.com/RoaringBitmap/roaring/v2 v2.4.3
 	github.com/atotto/clipboard v0.1.4
@@ -68,7 +69,6 @@ require (
 
 require (
 	decred.org/cspp/v2 v2.4.0 // indirect
-	decred.org/dcrwallet/v4 v4.3.1 // indirect
 	github.com/NebulousLabs/go-upnp v0.0.0-20181203152547-b32978b8ccbf // indirect
 	github.com/Yawning/aez v0.0.0-20211027044916-e49e68abd344 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect

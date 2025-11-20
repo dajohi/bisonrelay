@@ -9,12 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -54,8 +56,6 @@ import (
 	"github.com/decred/slog"
 	"github.com/puzpuzpuz/xsync/v3"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 	"golang.org/x/text/collate"
 )
 

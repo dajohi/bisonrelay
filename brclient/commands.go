@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"runtime"
 	"runtime/pprof"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -32,7 +33,6 @@ import (
 	"github.com/decred/dcrlnd/lnwire"
 	"github.com/mitchellh/go-homedir"
 	"github.com/skip2/go-qrcode"
-	"golang.org/x/exp/slices"
 )
 
 const leader = '/'

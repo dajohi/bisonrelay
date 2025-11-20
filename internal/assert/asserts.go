@@ -7,10 +7,9 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
-
-	"golang.org/x/exp/slices"
 )
 
 // ChanWritten returns the value written to chan c or times out.

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -15,7 +16,6 @@ import (
 	"github.com/companyzero/bisonrelay/internal/jsonfile"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
-	"golang.org/x/exp/slices"
 )
 
 const (

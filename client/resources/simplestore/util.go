@@ -1,6 +1,6 @@
 package simplestore
 
-import "golang.org/x/exp/slices"
+import "slices"
 
 func pathEquals(path []string, target ...string) bool {
 	return slices.Equal(path, target)

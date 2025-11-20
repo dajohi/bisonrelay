@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/zkidentity"
-	"golang.org/x/exp/slices"
 )
 
 // loadContentFilters reloads content filters from the DB.

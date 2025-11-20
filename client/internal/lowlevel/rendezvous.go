@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/slog"
-	"golang.org/x/exp/maps"
 )
 
 type RVID = ratchet.RVPoint

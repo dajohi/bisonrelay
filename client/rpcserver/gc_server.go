@@ -2,6 +2,7 @@ package rpcserver
 
 import (
 	"context"
+	"slices"
 
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -9,7 +10,6 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
-	"golang.org/x/exp/slices"
 )
 
 type GCServerCfg struct {

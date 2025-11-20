@@ -2,16 +2,17 @@ package replaymsglog
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/big"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/internal/testutils"
-	"golang.org/x/exp/rand"
 )
 
 type testStruct struct {
@@ -175,7 +176,7 @@ func TestConcurrentReplayMsgLog(t *testing.T) {
 			v := testStruct{Field: "sample field"}
 			id, err := rl.Store(v)
 			if err != nil {
-				panic(err)
+				t.Fatalf("%v", err)
 			}
 			idChan <- id
 		}
@@ -190,11 +191,16 @@ func TestConcurrentReplayMsgLog(t *testing.T) {
 				case id := <-idChan:
 					err := rl.ReadAfter(id, &v, func(ID) error { return nil })
 					if err != nil {
-						panic(err)
+						t.Fatalf("%v", err)
 					}
-					time.Sleep(time.Duration(rand.Intn(1000)) * time.Microsecond)
+					max := big.NewInt(1000)
+					dur, err := rand.Int(rand.Reader, max)
+					if err != nil {
+						t.Fatalf("%v", err)
+					}
+					time.Sleep(time.Duration(dur.Int64()) * time.Microsecond)
 					delChan <- id
-					time.Sleep(time.Duration(rand.Intn(1000)) * time.Microsecond)
+					time.Sleep(time.Duration(dur.Int64()) * time.Microsecond)
 				}
 			}
 		}()
@@ -208,7 +214,7 @@ func TestConcurrentReplayMsgLog(t *testing.T) {
 			case id := <-idChan:
 				err := rl.ClearUpTo(id)
 				if err != nil {
-					panic(err)
+					t.Fatalf("%v", err)
 				}
 			}
 		}

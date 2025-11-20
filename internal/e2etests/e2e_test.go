@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -31,7 +32,6 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/slog"
-	"golang.org/x/exp/slices"
 	"golang.org/x/text/collate"
 )
 

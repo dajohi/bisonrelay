@@ -5,13 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
-	"golang.org/x/exp/slices"
 )
 
 func assertSubAdded(t testing.TB, msg interface{}, id RVID) {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -13,7 +14,6 @@ import (
 	"github.com/companyzero/bisonrelay/ratchet/disk"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
-	"golang.org/x/exp/slices"
 )
 
 type UserID = clientintf.UserID

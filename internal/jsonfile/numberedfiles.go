@@ -5,9 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
-
-	"golang.org/x/exp/slices"
 )
 
 // MatchedNumberedFile is a matched numbered file.

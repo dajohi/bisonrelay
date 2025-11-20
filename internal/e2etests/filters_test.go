@@ -2,6 +2,7 @@ package e2etests
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
-	"golang.org/x/exp/maps"
 )
 
 // TestContentFilters assert that content filters work as expected.

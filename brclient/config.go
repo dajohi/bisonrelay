@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -24,7 +25,6 @@ import (
 	"github.com/decred/go-socks/socks"
 	"github.com/jrick/flagfile"
 	strduration "github.com/xhit/go-str2duration/v2"
-	"golang.org/x/exp/slices"
 )
 
 const (

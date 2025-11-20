@@ -3,10 +3,9 @@ package clientdb
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"time"
-
-	"golang.org/x/exp/slices"
 )
 
 // AddToSendQueue creates a new send queue element to send the given msg to the
