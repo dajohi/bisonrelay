@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"decred.org/dcrwallet/v4/version"
 	"github.com/BurntSushi/toml"
+	"github.com/companyzero/bisonrelay/brseeder/internal/version"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/slog"
 	"github.com/jrick/logrotate/rotator"

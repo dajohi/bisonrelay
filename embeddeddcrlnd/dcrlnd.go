@@ -169,7 +169,10 @@ retry:
 func (lndc *Dcrlnd) reconnect(ctx context.Context) error {
 	var err error
 	rpcAddr := lndc.rpcAddr
-	lndc.conn, err = grpc.DialContext(ctx, rpcAddr, append(lndc.connOpts, grpc.WithBlock())...)
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	lndc.conn, err = grpc.NewClient(rpcAddr, append(lndc.connOpts, grpc.WithBlock())...)
 	return err
 }
 
