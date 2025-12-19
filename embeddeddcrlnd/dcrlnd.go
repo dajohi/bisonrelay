@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/decred/dcrlnd"
@@ -88,8 +88,7 @@ type Dcrlnd struct {
 	logPath      string
 	hasPassFile  bool
 
-	mtx      sync.Mutex
-	unlocked bool
+	unlocked atomic.Bool
 }
 
 var ErrLNWalletNotFound = errors.New("wallet not found")
@@ -160,9 +159,7 @@ retry:
 		return fmt.Errorf("unable to reconnect after unlock: %v", err)
 	}
 
-	lndc.mtx.Lock()
-	lndc.unlocked = true
-	lndc.mtx.Unlock()
+	lndc.unlocked.Store(true)
 	return nil
 }
 
@@ -207,9 +204,7 @@ func (lndc *Dcrlnd) Create(ctx context.Context, pass string, existingSeed []stri
 		return nil, err
 	}
 
-	lndc.mtx.Lock()
-	lndc.unlocked = true
-	lndc.mtx.Unlock()
+	lndc.unlocked.Store(true)
 
 	// Wait until the macaroon file is created.
 	for {
@@ -346,11 +341,7 @@ func (lndc *Dcrlnd) NotifyInitialChainSync(ctx context.Context, ntf ChainSyncNot
 
 // Wait blocks until this process is done or the passed context is canceled.
 func (lndc *Dcrlnd) Wait(ctx context.Context) error {
-	lndc.mtx.Lock()
-	unlocked := lndc.unlocked
-	lndc.mtx.Unlock()
-
-	if !unlocked {
+	if !lndc.unlocked.Load() {
 		// Return early because dcrlnd.Main() does not return when
 		// it's waiting for a password.
 		return nil
